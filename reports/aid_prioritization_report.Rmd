@@ -1,0 +1,1278 @@
+---
+title: "Socio-Economic Country Clustering for Aid Prioritization"
+subtitle: "A Professional Unsupervised Machine Learning Analysis using PCA, K-means, Hierarchical Clustering, and Need-Based Ranking"
+author: "Eliya Christopher Nandi"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    number_sections: true
+    theme: flatly
+    highlight: tango
+    code_folding: show
+    df_print: paged
+params:
+  data_path: "Country-data.csv"
+  k_clusters: 4
+  run_autoencoder: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center",
+  fig.width = 10.5,
+  fig.height = 6.4,
+  out.width = "96%",
+  comment = "#>"
+)
+
+set.seed(123)
+```
+
+<style>
+/* ===============================
+   Professional Report Styling
+   =============================== */
+
+.main-container {
+  max-width: 1180px !important;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  line-height: 1.65;
+}
+
+body {
+  color: #243B53;
+  background-color: #FAFBFC;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 750;
+  color: #102A43;
+}
+
+h1.title {
+  color: #102A43;
+  font-size: 38px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+h3.subtitle {
+  color: #486581;
+  font-weight: 500;
+  margin-top: 0;
+}
+
+.author, .date {
+  color: #627D98;
+  font-size: 15px;
+}
+
+pre {
+  border-radius: 12px;
+  border: 1px solid #D9E2EC;
+  background-color: #F8FAFC;
+  padding: 14px;
+}
+
+code {
+  color: #102A43;
+}
+
+.table {
+  background-color: white;
+}
+
+blockquote {
+  border-left: 5px solid #2F80ED;
+  background-color: #F4F8FF;
+  padding: 14px 18px;
+  border-radius: 10px;
+  color: #243B53;
+}
+
+.profile-card {
+  background: linear-gradient(135deg, #102A43 0%, #243B53 56%, #334E68 100%);
+  color: white;
+  padding: 30px 34px;
+  border-radius: 18px;
+  margin: 22px 0 28px 0;
+  box-shadow: 0 14px 34px rgba(16, 42, 67, 0.18);
+}
+
+.profile-card h2 {
+  color: white;
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 28px;
+}
+
+.profile-card p {
+  color: #E6F6FF;
+  margin: 5px 0;
+  font-size: 15.5px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 7px 12px;
+  margin: 5px 7px 5px 0;
+  border-radius: 999px;
+  background-color: #D9E2EC;
+  color: #102A43;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.badge-blue {
+  background-color: #DCEEFB;
+  color: #0B69A3;
+}
+
+.badge-green {
+  background-color: #E3FCEC;
+  color: #147D64;
+}
+
+.badge-gold {
+  background-color: #FFF3C4;
+  color: #8D2B0B;
+}
+
+.callout {
+  border-left: 6px solid #2F80ED;
+  background: #F4F8FF;
+  padding: 17px 20px;
+  border-radius: 12px;
+  margin: 22px 0;
+  box-shadow: 0 4px 12px rgba(47, 128, 237, 0.06);
+}
+
+.callout-success {
+  border-left-color: #27AE60;
+  background: #F4FFF8;
+}
+
+.callout-warning {
+  border-left-color: #F2994A;
+  background: #FFF8EF;
+}
+
+.callout-danger {
+  border-left-color: #D64545;
+  background: #FFF5F5;
+}
+
+.section-note {
+  background: white;
+  border: 1px solid #E5EAF0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin: 18px 0 24px 0;
+  box-shadow: 0 8px 18px rgba(16, 42, 67, 0.05);
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 14px;
+  margin: 20px 0 22px 0;
+}
+
+.metric-card {
+  background: white;
+  border: 1px solid #E5EAF0;
+  border-radius: 16px;
+  padding: 18px 16px;
+  box-shadow: 0 8px 18px rgba(16, 42, 67, 0.06);
+}
+
+.metric-card .label {
+  color: #627D98;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metric-card .value {
+  color: #102A43;
+  font-size: 28px;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+.caption-text {
+  color: #627D98;
+  font-size: 13px;
+  font-style: italic;
+  text-align: center;
+  margin-top: -4px;
+}
+
+.footer-note {
+  color: #627D98;
+  font-size: 13px;
+  border-top: 1px solid #D9E2EC;
+  margin-top: 38px;
+  padding-top: 18px;
+}
+
+@media print {
+  .profile-card {
+    box-shadow: none;
+  }
+  .metric-card {
+    box-shadow: none;
+  }
+}
+</style>
+
+<div class="profile-card">
+  <h2>Eliya Christopher Nandi</h2>
+  <p><strong>Profession:</strong> Data Scientist | AI & Machine Learning Enthusiast</p>
+  <p><strong>Email:</strong> eliyachristopher.nandi@community.unipa.it</p>
+  <p><strong>Project:</strong> Statistical Machine Learning Portfolio Report</p>
+  <p><strong>Focus:</strong> Country segmentation, dimensionality reduction, unsupervised learning, and evidence-based aid prioritization</p>
+</div>
+
+# Executive Summary
+
+This report presents a professional end-to-end **unsupervised machine learning analysis** of country-level socio-economic and health indicators. The goal is to segment countries into meaningful groups and identify countries that may require urgent development support.
+
+The workflow applies **feature engineering**, **exploratory data analysis**, **standardization**, **Principal Component Analysis (PCA)**, **K-means clustering**, **hierarchical clustering**, **silhouette validation**, and **need-score ranking**.
+
+<span class="badge badge-blue">Data Science</span>
+<span class="badge badge-blue">Statistical Machine Learning</span>
+<span class="badge badge-green">PCA</span>
+<span class="badge badge-green">K-means</span>
+<span class="badge badge-green">Hierarchical Clustering</span>
+<span class="badge badge-gold">Aid Prioritization</span>
+
+<div class="callout">
+<strong>Core Question</strong><br>
+How can countries be grouped based on socio-economic and health indicators, and which countries should be prioritized for aid based on high child mortality, low GDP per capita, and low health expenditure?
+</div>
+
+# 1. Project Objectives
+
+This analysis was designed to answer four practical questions:
+
+1. What patterns exist among countries based on socio-economic and health indicators?
+2. Can dimensionality reduction simplify the structure of the dataset while preserving most information?
+3. How do K-means and hierarchical clustering compare for country segmentation?
+4. Which countries show the greatest need for aid based on a transparent need-score framework?
+
+# 2. Methodological Roadmap
+
+The project follows a structured data science workflow:
+
+1. Load and inspect the dataset.
+2. Convert percentage-based economic indicators into actual values.
+3. Conduct exploratory data analysis and outlier detection.
+4. Standardize numeric variables for fair comparison.
+5. Use PCA to reduce dimensionality.
+6. Apply hierarchical clustering and K-means clustering.
+7. Evaluate clustering quality using silhouette scores.
+8. Profile clusters using meaningful socio-economic indicators.
+9. Generate a need score and rank countries for aid prioritization.
+
+<div class="section-note">
+<strong>Why this structure matters:</strong><br>
+A professional machine learning report should not only run models. It should explain why each method is used, what each code block does, and how the outputs support the final recommendation.
+</div>
+
+# 3. Load Required Libraries
+
+Before running the analysis, the required R packages are loaded. These libraries support data manipulation, visualization, clustering, PCA, correlation analysis, and report formatting.
+
+```{r load-libraries}
+load_package <- function(package_name) {
+  if (!requireNamespace(package_name, quietly = TRUE)) {
+    stop(
+      paste0(
+        "Package '", package_name, "' is required but not installed. ",
+        "Please install it using install.packages('", package_name, "')."
+      )
+    )
+  }
+  suppressPackageStartupMessages(
+    library(package_name, character.only = TRUE)
+  )
+}
+
+required_packages <- c(
+  "tidyverse",
+  "skimr",
+  "ggcorrplot",
+  "factoextra",
+  "cluster",
+  "knitr"
+)
+
+invisible(lapply(required_packages, load_package))
+
+theme_set(theme_minimal(base_size = 12))
+```
+
+**Output interpretation:**  
+If this code runs without errors, all required packages are available and the analysis environment is ready.
+
+# 4. Load and Inspect the Dataset
+
+This section imports the country dataset and performs an initial inspection. The goal is to understand the number of countries, variables, and the basic structure of the data before modeling.
+
+```{r load-data}
+if (!file.exists(params$data_path)) {
+  stop(
+    paste0(
+      "Dataset not found: ", params$data_path,
+      ". Please place Country-data.csv in the same folder as this R Markdown file."
+    )
+  )
+}
+
+df_raw <- read.csv(params$data_path)
+
+n_countries <- nrow(df_raw)
+n_variables <- ncol(df_raw)
+
+cat("Number of countries:", n_countries, "\n")
+cat("Number of variables:", n_variables, "\n")
+
+head(df_raw) |>
+  knitr::kable(caption = "Table 1. Preview of the Original Dataset")
+```
+
+**Output interpretation:**  
+The preview confirms that each row represents a country and each column represents a socio-economic or health indicator.
+
+```{r inspect-structure}
+str(df_raw)
+```
+
+**Output interpretation:**  
+The structure output shows variable types. The `country` variable is a character field, while the remaining variables are numeric indicators used for analysis.
+
+# 5. Data Dictionary
+
+The dataset includes a mix of demographic, health, and economic indicators. Understanding these variables is important before applying unsupervised learning.
+
+```{r data-dictionary}
+data_dictionary <- tibble::tribble(
+  ~Variable, ~Description,
+  "country", "Country name",
+  "child_mort", "Child mortality rate",
+  "exports", "Exports as percentage of GDP in the raw dataset",
+  "health", "Health expenditure as percentage of GDP in the raw dataset",
+  "imports", "Imports as percentage of GDP in the raw dataset",
+  "income", "Net income per person",
+  "inflation", "Annual inflation rate",
+  "life_expec", "Average life expectancy",
+  "total_fer", "Total fertility rate",
+  "gdpp", "GDP per capita"
+)
+
+data_dictionary |>
+  knitr::kable(caption = "Table 2. Data Dictionary")
+```
+
+**Output interpretation:**  
+The variables provide enough information to compare countries across health outcomes, economic strength, trade activity, and population characteristics.
+
+# 6. Feature Engineering
+
+The original `exports`, `health`, and `imports` variables are percentages of GDP. This code converts them into actual monetary values by multiplying each percentage by GDP per capita. This makes the indicators easier to compare across countries.
+
+```{r feature-engineering}
+df <- df_raw |>
+  mutate(
+    exports = (exports * gdpp) / 100,
+    health  = (health  * gdpp) / 100,
+    imports = (imports * gdpp) / 100,
+    gdpp    = as.numeric(gdpp),
+    income  = as.numeric(income),
+    country = factor(country)
+  )
+
+missing_values <- sum(sapply(df, function(x) sum(is.na(x))))
+
+cat("Total missing values:", missing_values, "\n")
+
+head(df) |>
+  knitr::kable(
+    digits = 2,
+    caption = "Table 3. Dataset After Feature Engineering"
+  )
+```
+
+**Output interpretation:**  
+The converted values represent estimated actual exports, health expenditure, and imports per person. The missing-value check verifies whether imputation or row removal is required.
+
+# 7. Dataset Overview After Cleaning
+
+This section summarizes the cleaned dataset and gives a high-level view of the numeric variables.
+
+```{r dataset-overview}
+X <- df |> select(-country)
+
+overview_tbl <- tibble(
+  Metric = c("Countries", "Numeric indicators", "Missing values"),
+  Value = c(nrow(df), ncol(X), missing_values)
+)
+
+overview_tbl |>
+  knitr::kable(caption = "Table 4. Cleaned Dataset Overview")
+```
+
+```{r skim-summary}
+skimr::skim(X)
+```
+
+**Output interpretation:**  
+The summary statistics show central tendency, spread, and distribution characteristics. Large differences in scale across variables confirm the need for standardization before PCA and clustering.
+
+# 8. Exploratory Data Analysis
+
+Exploratory data analysis helps identify distributions, skewness, and potential outliers. This is essential before applying clustering because extreme values and scale differences can strongly influence unsupervised algorithms.
+
+```{r prepare-eda}
+X_long <- df |>
+  select(country, all_of(names(X))) |>
+  pivot_longer(
+    cols = names(X),
+    names_to = "feature",
+    values_to = "value"
+  )
+```
+
+**Output interpretation:**  
+The dataset is reshaped into long format to make feature-by-feature visualization easier.
+
+## 8.1 Distribution of Indicators
+
+The following code plots the distribution of each numeric indicator. This helps identify skewed variables and unusual patterns.
+
+```{r distribution-plot}
+ggplot(X_long, aes(x = value)) +
+  geom_histogram(
+    bins = 25,
+    fill = "#2F80ED",
+    color = "white",
+    alpha = 0.88
+  ) +
+  facet_wrap(~ feature, scales = "free") +
+  labs(
+    title = "Distribution of Socio-Economic and Health Indicators",
+    subtitle = "Raw-scale distributions across all countries",
+    x = "Value",
+    y = "Number of Countries"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", color = "#102A43"),
+    plot.subtitle = element_text(color = "#627D98"),
+    strip.text = element_text(face = "bold", color = "#102A43")
+  )
+```
+
+**Output interpretation:**  
+Several variables are right-skewed, especially GDP per capita, income, exports, imports, and health expenditure. This is common in cross-country data because a small number of countries have much higher economic values than the majority.
+
+## 8.2 Log-Scale View of Skewed Variables
+
+Because economic variables often contain extreme high values, this code visualizes selected skewed variables on a log scale.
+
+```{r log-scale-plot}
+skew_vars <- c("gdpp", "income", "child_mort")
+
+X_long |>
+  filter(feature %in% skew_vars) |>
+  ggplot(aes(x = value)) +
+  geom_histogram(
+    bins = 25,
+    fill = "#56CCF2",
+    color = "white",
+    alpha = 0.9
+  ) +
+  facet_wrap(~ feature, scales = "free") +
+  scale_x_continuous(trans = "log10") +
+  labs(
+    title = "Log10 View of Selected Skewed Variables",
+    subtitle = "Log scaling improves visibility of heavily skewed distributions",
+    x = "Log-scaled value",
+    y = "Number of Countries"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", color = "#102A43"),
+    plot.subtitle = element_text(color = "#627D98"),
+    strip.text = element_text(face = "bold", color = "#102A43")
+  )
+```
+
+**Output interpretation:**  
+The log-scale view makes the spread of values easier to interpret and confirms that countries differ substantially in economic and health conditions.
+
+## 8.3 Boxplots for Outlier Detection
+
+This code uses boxplots to detect feature-level outliers. Outliers are important because they can influence PCA, K-means, and hierarchical clustering.
+
+```{r boxplot-outliers}
+ggplot(X_long, aes(x = feature, y = value, fill = feature)) +
+  geom_boxplot(
+    outlier.colour = "#D62728",
+    outlier.size = 2.8,
+    outlier.alpha = 0.75
+  ) +
+  coord_flip() +
+  labs(
+    title = "Boxplots for Outlier Detection",
+    subtitle = "Red points represent potential outlying observations",
+    x = "Feature",
+    y = "Value"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold", color = "#102A43"),
+    plot.subtitle = element_text(color = "#627D98")
+  )
+```
+
+**Output interpretation:**  
+The plot highlights substantial outliers in GDP, income, exports, imports, and health expenditure. These outliers may represent highly developed or highly trade-dependent economies.
+
+# 9. Standardization and Multivariate Outliers
+
+Clustering requires variables to be on a comparable scale. This code standardizes all numeric variables using Z-score normalization.
+
+```{r standardization}
+X_scaled <- scale(X)
+
+normalization_check <- tibble(
+  feature = colnames(X_scaled),
+  mean_after_scaling = round(colMeans(X_scaled), 4),
+  sd_after_scaling = round(apply(X_scaled, 2, stats::sd), 4)
+)
+
+normalization_check |>
+  knitr::kable(caption = "Table 5. Standardization Check")
+```
+
+**Output interpretation:**  
+A mean close to 0 and standard deviation close to 1 confirm successful standardization.
+
+## 9.1 Multivariate Outlier Ranking
+
+This code calculates a multivariate outlier score based on each country's Euclidean distance from the standardized center of the dataset.
+
+```{r multivariate-outliers}
+outlier_rank <- tibble(
+  country = df$country,
+  outlier_score = sqrt(rowSums(X_scaled^2))
+) |>
+  arrange(desc(outlier_score))
+
+head(outlier_rank, 10) |>
+  knitr::kable(
+    digits = 3,
+    caption = "Table 6. Top 10 Multivariate Outliers Based on Z-score Distance"
+  )
+```
+
+**Output interpretation:**  
+The largest outlier scores identify countries whose overall socio-economic profiles differ most strongly from the rest of the dataset.
+
+```{r outlier-barplot}
+top_outliers <- outlier_rank |> slice_head(n = 10)
+
+ggplot(top_outliers, aes(x = reorder(country, outlier_score), y = outlier_score, fill = outlier_score)) +
+  geom_col(color = "#102A43", width = 0.72) +
+  coord_flip() +
+  scale_fill_gradient(low = "#56CCF2", high = "#D62728") +
+  labs(
+    title = "Top 10 Multivariate Outliers",
+    subtitle = "Countries ranked by standardized multivariate distance",
+    x = "Country",
+    y = "Outlier Score"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold", color = "#102A43"),
+    plot.subtitle = element_text(color = "#627D98")
+  )
+```
+
+**Output interpretation:**  
+High-income and highly trade-oriented economies may appear as outliers because their GDP, income, export, import, or health expenditure values are far above the global average.
+
+# 10. Correlation Analysis
+
+Correlation analysis examines relationships between variables. Strong correlations suggest that dimensionality reduction can summarize the data efficiently.
+
+```{r correlation-heatmap}
+corr <- cor(X, use = "pairwise.complete.obs")
+
+ggcorrplot(
+  corr,
+  type = "lower",
+  lab = TRUE,
+  lab_size = 3,
+  colors = c("#D62728", "white", "#2F80ED")
+) +
+  labs(
+    title = "Correlation Heatmap of Socio-Economic Indicators",
+    subtitle = "Blue indicates positive correlation; red indicates negative correlation"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", color = "#102A43"),
+    plot.subtitle = element_text(color = "#627D98")
+  )
+```
+
+**Output interpretation:**  
+Variables such as GDP per capita, income, health expenditure, and life expectancy tend to capture development-related patterns. Child mortality and fertility often move in the opposite direction from development indicators.
+
+# 11. Dimensionality Reduction with PCA
+
+PCA reduces the original variables into a smaller set of uncorrelated components. This is useful because clustering in a lower-dimensional space can reduce noise and improve interpretability.
+
+```{r pca-model}
+pca_result <- prcomp(X_scaled)
+
+explained_variance <- pca_result$sdev^2 / sum(pca_result$sdev^2)
+cumulative_variance <- cumsum(explained_variance)
+
+pca_variance_tbl <- tibble(
+  component = paste0("PC", seq_along(explained_variance)),
+  explained_variance_percent = round(explained_variance * 100, 2),
+  cumulative_variance_percent = round(cumulative_variance * 100, 2)
+)
+
+num_components <- which(cumulative_variance >= 0.90)[1]
+
+pca_variance_tbl |>
+  knitr::kable(caption = "Table 7. PCA Explained Variance")
+```
+
+**Output interpretation:**  
+This table shows how much information each principal component retains. Components are selected until at least 90% of total variance is retained.
+
+```{r pca-components-summary}
+cat("Number of principal components required to retain at least 90% variance:", num_components, "\n")
+cat("Cumulative variance retained:", round(cumulative_variance[num_components] * 100, 2), "%\n")
+```
+
+**Output interpretation:**  
+The selected components preserve most of the information in the dataset while reducing the number of dimensions used for clustering.
+
+## 11.1 PCA Scree Plot
+
+This code visualizes the contribution of each principal component.
+
+```{r pca-scree-plot}
+factoextra::fviz_eig(
+  pca_result,
+  addlabels = TRUE,
+  ylim = c(0, 65),
+  barfill = "#2F80ED",
+  barcolor = "#2F80ED",
+  main = "PCA Scree Plot"
+) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", color = "#102A43")
+  )
+```
+
+**Output interpretation:**  
+The first few components explain most of the variance, which justifies using PCA before clustering.
+
+## 11.2 Cumulative Explained Variance
+
+This code plots cumulative explained variance and highlights the 90% threshold.
+
+```{r cumulative-variance-plot}
+cumulative_df <- tibble(
+  component_number = seq_along(cumulative_variance),
+  cumulative_variance = cumulative_variance
+)
+
+ggplot(cumulative_df, aes(x = component_number, y = cumulative_variance)) +
+  geom_line(color = "#2F80ED", linewidth = 1.1) +
+  geom_point(color = "#D62728", size = 3) +
+  geom_hline(yintercept = 0.90, linetype = "dashed", color = "#27AE60", linewidth = 1) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_x_continuous(breaks = cumulative_df$component_number) +
+  labs(
+    title = "Cumulative Explained Variance",
+    subtitle = "Dashed line indicates the 90% variance threshold",
+    x = "Number of Principal Components",
+    y = "Cumulative Explained Variance"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", color = "#102A43"),
+    plot.subtitle = element_text(color = "#627D98")
+  )
+```
+
+**Output interpretation:**  
+The curve shows that a small number of components can summarize most of the dataset.
+
+<div class="callout callout-success">
+<strong>PCA Decision:</strong><br>
+The analysis retains <strong>`r num_components` principal components</strong>, preserving approximately <strong>`r round(cumulative_variance[num_components] * 100, 2)`%</strong> of the total variance.
+</div>
+
+# 12. Optional Autoencoder Comparison
+
+An autoencoder is a neural-network-based dimensionality reduction method. It can capture non-linear patterns, but it requires additional deep learning dependencies. For a clean professional report, this section is optional.
+
+To run it, change `run_autoencoder` from `false` to `true` in the YAML header.
+
+```{r autoencoder, eval=params$run_autoencoder}
+if (!requireNamespace("keras3", quietly = TRUE)) {
+  stop("The keras3 package is required to run the autoencoder section.")
+}
+
+library(keras3)
+
+input_dim <- ncol(X_scaled)
+latent_dim <- num_components
+
+input_layer <- layer_input(shape = c(input_dim))
+
+encoder_hidden <- input_layer |>
+  layer_dense(units = 128, activation = "relu")
+
+encoder_output <- encoder_hidden |>
+  layer_dense(units = latent_dim, activation = "relu")
+
+decoder_hidden <- encoder_output |>
+  layer_dense(units = 128, activation = "relu")
+
+decoder_output <- decoder_hidden |>
+  layer_dense(units = input_dim, activation = "linear")
+
+autoencoder <- keras_model(inputs = input_layer, outputs = decoder_output)
+
+autoencoder |>
+  compile(
+    optimizer = "adam",
+    loss = "mean_squared_error"
+  )
+
+history <- autoencoder |>
+  fit(
+    X_scaled,
+    X_scaled,
+    epochs = 50,
+    batch_size = 32,
+    validation_split = 0.2,
+    verbose = 0
+  )
+
+encoder <- keras_model(
+  inputs = input_layer,
+  outputs = encoder_output
+)
+
+encoded_data <- encoder |> predict(X_scaled)
+
+encoded_df <- as.data.frame(encoded_data)
+colnames(encoded_df) <- paste0("Latent_", seq_len(ncol(encoded_df)))
+
+ggplot(encoded_df, aes(x = Latent_1, y = Latent_2)) +
+  geom_point(alpha = 0.75, color = "#D62728", size = 2.6) +
+  labs(
+    title = "2D Latent Space from Autoencoder",
+    x = "Latent Dimension 1",
+    y = "Latent Dimension 2"
+  ) +
+  theme_minimal(base_size = 12)
+```
+
+**Output interpretation:**  
+If enabled, the autoencoder output provides a non-linear compressed representation of the dataset. PCA is retained as the main method because it is interpretable, reproducible, and sufficient for the observed correlated structure.
+
+# 13. Prepare PCA Data for Clustering
+
+This code extracts the selected PCA components and prepares them for clustering.
+
+```{r prepare-pca-clustering}
+pca_components <- as.data.frame(pca_result$x[, 1:num_components])
+pca_components$country <- df$country
+
+pca_matrix <- pca_components |> select(-country)
+
+head(pca_components) |>
+  knitr::kable(
+    digits = 3,
+    caption = "Table 8. PCA Component Scores Used for Clustering"
+  )
+```
+
+**Output interpretation:**  
+Each country is now represented by a smaller set of PCA component scores instead of the original variables.
+
+# 14. Hierarchical Clustering
+
+Hierarchical clustering builds a tree-like structure of country similarity. Ward's method is selected because it tends to create compact and interpretable clusters.
+
+```{r hierarchical-distance}
+dist_pca <- dist(pca_matrix, method = "euclidean")
+hc_ward <- hclust(dist_pca, method = "ward.D2")
+```
+
+**Output interpretation:**  
+The Euclidean distance matrix captures similarity between countries in PCA space. Ward's method uses this distance matrix to create hierarchical clusters.
+
+## 14.1 Dendrogram
+
+This code visualizes the hierarchical clustering tree.
+
+```{r hierarchical-dendrogram}
+plot(
+  hc_ward,
+  labels = FALSE,
+  hang = -1,
+  main = "Hierarchical Clustering Dendrogram: Ward's Method",
+  xlab = "",
+  ylab = "Height"
+)
+```
+
+**Output interpretation:**  
+The dendrogram shows how countries merge into larger groups. Large vertical jumps indicate stronger separation between clusters.
+
+## 14.2 Cut the Dendrogram into Clusters
+
+This code cuts the dendrogram into `r params$k_clusters` clusters.
+
+```{r cut-hierarchical}
+k_final <- params$k_clusters
+
+hc_clusters <- cutree(hc_ward, k = k_final)
+
+pca_components$cluster_hc <- factor(hc_clusters)
+
+table(pca_components$cluster_hc) |>
+  knitr::kable(caption = "Table 9. Hierarchical Clustering: Cluster Sizes")
+```
+
+**Output interpretation:**  
+The cluster-size table shows how many countries belong to each hierarchical cluster.
+
+```{r highlighted-dendrogram}
+plot(
+  hc_ward,
+  labels = FALSE,
+  hang = -1,
+  main = paste0("Hierarchical Clustering Dendrogram: k = ", k_final),
+  xlab = "",
+  ylab = "Height"
+)
+
+rect.hclust(hc_ward, k = k_final, border = 2:(k_final + 1))
+```
+
+**Output interpretation:**  
+The colored rectangles show the selected cluster structure.
+
+## 14.3 Hierarchical Clustering Silhouette Analysis
+
+Silhouette analysis measures how well each country fits within its assigned cluster.
+
+```{r hierarchical-silhouette}
+sil_hc <- silhouette(hc_clusters, dist_pca)
+
+factoextra::fviz_silhouette(sil_hc) +
+  ggtitle(paste0("Silhouette Plot: Hierarchical Clustering, k = ", k_final)) +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold", color = "#102A43"))
+
+avg_sil_hc <- mean(sil_hc[, 3])
+
+cat("Average silhouette width for hierarchical clustering:", round(avg_sil_hc, 3), "\n")
+```
+
+**Output interpretation:**  
+Higher silhouette values indicate better-defined clusters. Values closer to 1 indicate strong separation, while values near 0 indicate overlap.
+
+# 15. K-means Clustering
+
+K-means clustering partitions countries into a fixed number of groups by minimizing within-cluster variation.
+
+## 15.1 Elbow Method
+
+The elbow method helps inspect a reasonable number of clusters by plotting within-cluster sum of squares for different values of `k`.
+
+```{r elbow-method}
+wss <- sapply(1:10, function(k) {
+  kmeans(pca_matrix, centers = k, nstart = 25)$tot.withinss
+})
+
+elbow_df <- tibble(k = 1:10, wss = wss)
+
+ggplot(elbow_df, aes(x = k, y = wss)) +
+  geom_line(color = "#2F80ED", linewidth = 1.1) +
+  geom_point(color = "#D62728", size = 3) +
+  scale_x_continuous(breaks = 1:10) +
+  labs(
+    title = "Elbow Method for K-means",
+    subtitle = "The elbow point suggests a practical number of clusters",
+    x = "Number of Clusters",
+    y = "Total Within-Cluster Sum of Squares"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", color = "#102A43"),
+    plot.subtitle = element_text(color = "#627D98")
+  )
+```
+
+**Output interpretation:**  
+A visible bend in the curve suggests that adding more clusters after that point gives diminishing returns.
+
+## 15.2 Fit K-means Model
+
+This code fits K-means using the selected number of clusters.
+
+```{r fit-kmeans}
+set.seed(123)
+
+kmeans_result <- kmeans(
+  pca_matrix,
+  centers = k_final,
+  nstart = 25
+)
+
+kmeans_clusters <- kmeans_result$cluster
+
+table(kmeans_clusters) |>
+  knitr::kable(caption = "Table 10. K-means Clustering: Cluster Sizes")
+```
+
+**Output interpretation:**  
+The table shows the number of countries assigned to each K-means cluster.
+
+## 15.3 Visualize K-means Clusters
+
+This code plots the K-means clusters in the first two PCA dimensions.
+
+```{r kmeans-plot}
+pca_cluster_kmeans <- tibble(
+  country = df$country,
+  PC1 = pca_result$x[, 1],
+  PC2 = pca_result$x[, 2],
+  Cluster = factor(kmeans_clusters)
+)
+
+ggplot(pca_cluster_kmeans, aes(x = PC1, y = PC2, color = Cluster)) +
+  geom_point(size = 3, alpha = 0.82) +
+  labs(
+    title = "K-means Clusters in PCA Space",
+    subtitle = "Countries projected onto the first two principal components",
+    x = "Principal Component 1",
+    y = "Principal Component 2"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", color = "#102A43"),
+    plot.subtitle = element_text(color = "#627D98")
+  )
+```
+
+**Output interpretation:**  
+The plot provides a visual representation of country groups in reduced PCA space.
+
+## 15.4 K-means Silhouette Analysis
+
+This code evaluates the quality of K-means clustering using silhouette width.
+
+```{r kmeans-silhouette}
+sil_kmeans <- silhouette(kmeans_clusters, dist(pca_matrix))
+
+factoextra::fviz_silhouette(sil_kmeans) +
+  ggtitle(paste0("Silhouette Plot: K-means, k = ", k_final)) +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold", color = "#102A43"))
+
+avg_sil_kmeans <- mean(sil_kmeans[, 3])
+
+cat("Average silhouette width for K-means:", round(avg_sil_kmeans, 3), "\n")
+```
+
+**Output interpretation:**  
+The average silhouette width summarizes overall cluster quality for K-means.
+
+# 16. Comparison of Clustering Methods
+
+This section compares K-means and hierarchical clustering using average silhouette width.
+
+```{r method-comparison}
+comparison_tbl <- tibble(
+  Method = c("Hierarchical Clustering", "K-means Clustering"),
+  Main_Idea = c(
+    "Builds a nested tree of country similarity using Ward's method",
+    "Partitions countries by minimizing within-cluster variation"
+  ),
+  Number_of_Clusters = c(k_final, k_final),
+  Average_Silhouette_Width = c(avg_sil_hc, avg_sil_kmeans)
+) |>
+  mutate(Average_Silhouette_Width = round(Average_Silhouette_Width, 3))
+
+comparison_tbl |>
+  knitr::kable(caption = "Table 11. Clustering Method Comparison")
+```
+
+**Output interpretation:**  
+The method with the higher average silhouette width provides stronger separation under this configuration. Both methods are retained because they offer complementary views of the country groupings.
+
+<div class="callout">
+<strong>Professional Interpretation:</strong><br>
+Hierarchical clustering is useful for understanding nested similarity structures, while K-means provides a direct partitioning of countries into groups. Comparing both strengthens the reliability of the final aid-prioritization decision.
+</div>
+
+# 17. Cluster Profiling
+
+Cluster profiling translates statistical clusters into meaningful socio-economic categories.
+
+```{r cluster-profiling}
+analysis_df <- df |>
+  mutate(
+    cluster_kmeans = factor(kmeans_clusters),
+    cluster_hc = factor(hc_clusters)
+  )
+
+profile_clusters <- function(data, cluster_col) {
+  data |>
+    group_by({{ cluster_col }}) |>
+    summarise(
+      countries = n(),
+      avg_gdpp = mean(gdpp, na.rm = TRUE),
+      avg_income = mean(income, na.rm = TRUE),
+      avg_exports = mean(exports, na.rm = TRUE),
+      avg_health = mean(health, na.rm = TRUE),
+      avg_child_mort = mean(child_mort, na.rm = TRUE),
+      .groups = "drop"
+    )
+}
+
+kmeans_profile <- profile_clusters(analysis_df, cluster_kmeans)
+hc_profile <- profile_clusters(analysis_df, cluster_hc)
+
+kmeans_profile |>
+  mutate(across(where(is.numeric), ~ round(.x, 2))) |>
+  knitr::kable(caption = "Table 12. K-means Cluster Profile")
+
+hc_profile |>
+  mutate(across(where(is.numeric), ~ round(.x, 2))) |>
+  knitr::kable(caption = "Table 13. Hierarchical Cluster Profile")
+```
+
+**Output interpretation:**  
+Clusters with high child mortality, low GDP per capita, and low health expenditure represent countries with more severe socio-economic and health challenges.
+
+# 18. Identify Highest-Need Clusters
+
+This code identifies the highest-need cluster in each clustering method. The ranking prioritizes high child mortality, low GDP per capita, and low health spending.
+
+```{r priority-clusters}
+priority_cluster_kmeans <- kmeans_profile |>
+  arrange(desc(avg_child_mort), avg_gdpp, avg_health) |>
+  slice(1)
+
+priority_cluster_hc <- hc_profile |>
+  arrange(desc(avg_child_mort), avg_gdpp, avg_health) |>
+  slice(1)
+
+priority_cluster_kmeans |>
+  mutate(across(where(is.numeric), ~ round(.x, 2))) |>
+  knitr::kable(caption = "Table 14. Highest-Need Cluster Based on K-means")
+
+priority_cluster_hc |>
+  mutate(across(where(is.numeric), ~ round(.x, 2))) |>
+  knitr::kable(caption = "Table 15. Highest-Need Cluster Based on Hierarchical Clustering")
+```
+
+**Output interpretation:**  
+The highest-need cluster is the group with the most severe combination of poor health and weak economic indicators.
+
+# 19. Need Score Construction
+
+A transparent need score is calculated to rank countries inside the priority group.
+
+The score is defined as:
+
+\[
+\text{Need Score} = z(\text{child mortality}) - z(\text{GDP per capita}) - z(\text{health expenditure})
+\]
+
+Higher values indicate greater need.
+
+```{r need-score}
+priority_countries <- analysis_df |>
+  filter(
+    cluster_kmeans == priority_cluster_kmeans$cluster_kmeans |
+      cluster_hc == priority_cluster_hc$cluster_hc
+  ) |>
+  mutate(
+    normalized_child_mort = as.numeric(scale(child_mort)),
+    normalized_gdpp = as.numeric(scale(gdpp)),
+    normalized_health = as.numeric(scale(health)),
+    need_score = normalized_child_mort - normalized_gdpp - normalized_health
+  ) |>
+  arrange(desc(need_score))
+
+priority_countries |>
+  select(country, child_mort, gdpp, income, health, need_score) |>
+  mutate(need_score = round(need_score, 3)) |>
+  head(15) |>
+  knitr::kable(caption = "Table 16. Top 15 Countries Ranked by Need Score")
+```
+
+**Output interpretation:**  
+Countries at the top of the table have the strongest evidence of need based on the selected indicators.
+
+```{r need-score-plot}
+priority_countries |>
+  slice_head(n = 15) |>
+  ggplot(aes(x = reorder(country, need_score), y = need_score, fill = need_score)) +
+  geom_col(show.legend = FALSE, width = 0.75) +
+  coord_flip() +
+  scale_fill_gradient(low = "#56CCF2", high = "#D62728") +
+  labs(
+    title = "Top 15 Countries Ranked by Need Score",
+    subtitle = "Higher score indicates higher aid priority",
+    x = "Country",
+    y = "Need Score"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", color = "#102A43"),
+    plot.subtitle = element_text(color = "#627D98")
+  )
+```
+
+**Output interpretation:**  
+The ranking provides a clear, explainable output that can support policy discussion and resource allocation planning.
+
+# 20. Cluster-Level Indicator Comparison
+
+The following plot compares major indicators across K-means clusters.
+
+```{r cluster-boxplots}
+analysis_df |>
+  pivot_longer(
+    cols = c(child_mort, gdpp, income, health),
+    names_to = "indicator",
+    values_to = "value"
+  ) |>
+  ggplot(aes(x = cluster_kmeans, y = value, fill = cluster_kmeans)) +
+  geom_boxplot(alpha = 0.86) +
+  facet_wrap(~ indicator, scales = "free_y") +
+  labs(
+    title = "Key Indicators by K-means Cluster",
+    subtitle = "Comparing economic and health characteristics across country groups",
+    x = "K-means Cluster",
+    y = "Value"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold", color = "#102A43"),
+    plot.subtitle = element_text(color = "#627D98"),
+    strip.text = element_text(face = "bold", color = "#102A43")
+  )
+```
+
+**Output interpretation:**  
+The boxplots show how clusters differ in child mortality, GDP per capita, income, and health expenditure. The most vulnerable cluster is expected to have high child mortality and lower economic/health-resource indicators.
+
+# 21. Country Lists by Cluster
+
+This section provides a transparent view of which countries belong to each cluster.
+
+```{r countries-by-cluster}
+countries_by_kmeans <- analysis_df |>
+  arrange(cluster_kmeans, country) |>
+  group_by(cluster_kmeans) |>
+  summarise(
+    countries = paste(as.character(country), collapse = ", "),
+    .groups = "drop"
+  )
+
+countries_by_hc <- analysis_df |>
+  arrange(cluster_hc, country) |>
+  group_by(cluster_hc) |>
+  summarise(
+    countries = paste(as.character(country), collapse = ", "),
+    .groups = "drop"
+  )
+
+countries_by_kmeans |>
+  knitr::kable(caption = "Table 17. Countries by K-means Cluster")
+
+countries_by_hc |>
+  knitr::kable(caption = "Table 18. Countries by Hierarchical Cluster")
+```
+
+**Output interpretation:**  
+This section improves interpretability by showing the country membership of each cluster instead of only presenting numerical summaries.
+
+# 22. Final Recommendation
+
+<div class="callout callout-success">
+<strong>Recommendation:</strong><br>
+Aid should be prioritized toward countries in the highest-need cluster, especially those with the highest need scores. These countries show the strongest combination of high child mortality, low GDP per capita, and low health expenditure.
+</div>
+
+The analysis suggests that aid programs should focus on:
+
+1. Healthcare investment and child mortality reduction.
+2. Economic development and poverty reduction.
+3. Education and infrastructure development.
+4. Country-specific validation using local governance, population, humanitarian access, and conflict-risk data.
+
+# 23. Final Conclusion
+
+This project demonstrates how unsupervised machine learning can support data-driven decision-making in international development and aid prioritization. PCA successfully reduced the dimensionality of the dataset while retaining most of the original information. K-means and hierarchical clustering both produced interpretable country groups. The need-score framework then translated clustering results into an actionable ranking of countries.
+
+<div class="callout callout-warning">
+<strong>Important Professional Note:</strong><br>
+This analysis is intended for statistical learning, portfolio demonstration, and decision-support exploration. Real-world aid allocation should combine quantitative analysis with domain expertise, field-level information, population size, political context, humanitarian access, and ethical review.
+</div>
+
+# 24. Reproducibility Instructions
+
+To reproduce this report:
+
+1. Place `Country-data.csv` in the same folder as this `.Rmd` file.
+2. Open the `.Rmd` file in RStudio.
+3. Install missing packages if prompted.
+4. Click **Knit** to generate the HTML report.
+5. Upload both the `.Rmd` and knitted `.html` file to GitHub.
+
+# 25. Session Information
+
+The session information below records the R version and package environment used to generate the analysis.
+
+```{r session-info}
+sessionInfo()
+```
+
+<div class="footer-note">
+Prepared by Eliya Christopher Nandi — Data Scientist | AI & Machine Learning Enthusiast.
+</div>
