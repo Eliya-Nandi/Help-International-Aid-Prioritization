@@ -256,24 +256,6 @@ data/Country-data.csv
 
 or update the `data_path` parameter in the R Markdown file.
 
----
-
-## Interview Explanation
-
-**What is the project?**  
-I built an unsupervised machine learning project to help HELP International prioritize countries for a $10 million aid fund using socio-economic and health indicators.
-
-**What problem did it solve?**  
-The organization needed a data-driven way to identify countries most in need of aid instead of relying on manual judgment or one single indicator.
-
-**How did I solve it?**  
-I cleaned and standardized the data, performed EDA, reduced dimensionality using PCA, applied hierarchical clustering and K-means clustering, compared the results using silhouette scores, profiled each cluster, and created a need-score ranking for country-level prioritization.
-
-**What technologies did I use?**  
-R, tidyverse, ggplot2, PCA, K-means clustering, hierarchical clustering, silhouette analysis, and R Markdown.
-
-**What was my contribution?**  
-I handled the full pipeline from preprocessing to model development, evaluation, interpretation, and final recommendation.
 
 ---
 
@@ -302,9 +284,3 @@ I handled the full pipeline from preprocessing to model development, evaluation,
 Data Scientist | AI & Machine Learning Enthusiast  
 Email: [eliyanandi07@gmail.com](mailto:eliyanandi07@gmail.com)  
 GitHub: [Eliya-Nandi](https://github.com/Eliya-Nandi)
-
----
-
-## Project Status
-
-Completed as a professional data science and machine learning portfolio project.
