@@ -10,6 +10,14 @@ The analysis combines **data preprocessing, exploratory data analysis, PCA, K-me
 
 ---
 
+## Live Report
+
+View the knitted HTML report here:
+
+**[Open the Professional HTML Report](https://eliya-nandi.github.io/Help-International-Aid-Prioritization/)**
+
+---
+
 ## Business Problem
 
 Aid allocation is a multidimensional decision. A country may require support because of high child mortality, low GDP per capita, weak health expenditure, low income, poor life expectancy, or limited economic capacity.
@@ -193,15 +201,13 @@ help-international-aid-prioritization/
 |   |-- aid_prioritization_report.Rmd
 |   |-- aid_prioritization_report.html
 |
-|-- slides/
-|   |-- aid_prioritization_presentation.pdf
 |
 |-- outputs/
+|   |-- aid_prioritization_report.html
 |   |-- figures/
 |
-|-- docs/
-|   |-- interview_explanation.md
 |
+|-- index.html
 |-- requirements.R
 |-- .gitignore
 |-- README.md
@@ -215,6 +221,7 @@ The repository includes both:
 
 - `reports/aid_prioritization_report.Rmd` — the editable R Markdown source file
 - `reports/aid_prioritization_report.html` — the knitted professional HTML report ready to view in a browser
+- `outputs/aid_prioritization_report.html` — the GitHub Pages version of the HTML report
 
 ---
 
