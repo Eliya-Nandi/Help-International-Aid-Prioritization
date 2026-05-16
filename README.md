@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="outputs/global_aid_prioritization.png" alt="HELP International Aid Prioritization Project Thumbnail" width="100%">
+  <img src="outputs/global_aid_prioritization_project.png" alt="HELP International Aid Prioritization Project Thumbnail" width="100%">
 </p>
 
 # HELP International: Aid Prioritization Using Unsupervised Learning
