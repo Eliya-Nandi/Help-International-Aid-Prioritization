@@ -1,7 +1,5 @@
-#Eliya Chritopher Nandi  (0829396 )
-#MSc in Statistics and Data Science
-#Course: Statistical Machine Learning
-#Email: eliyachristopher.nandi@community.unipa.it
+# Eliya Chritopher Nandi  
+# Email: eliyanandi07@gmail.com
 
 
 # ============================
